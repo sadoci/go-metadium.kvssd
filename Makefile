@@ -255,8 +255,10 @@ kvssd:
 		echo "Syncing KVSSD PDK...";				\
 		cd $${GOPATH}/src/github.com/ethereum/go-ethereum/vendor; \
 		$${GOPATH}/bin/govendor sync -v;			\
-		sed -i '/add_library(kvapi SHARED/aadd_library(kvapi_static STATIC $${SOURCES_API} $${HEADERS_API})' $${GOPATH}/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core/CMakeLists.txt;	\
 	fi
+	@THE_FILE=$${GOPATH}/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core/CMakeLists.txt;				\
+		 grep -q kvapi_static $${THE_FILE} 2> /dev/null || 	\
+		 sed -i '/add_library(kvapi SHARED/aadd_library(kvapi_static STATIC $${SOURCES_API} $${HEADERS_API})' $${THE_FILE};
 	@cd $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core;				\
 		mkdir -p build;						\
 		cd build;						\
