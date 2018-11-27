@@ -26,12 +26,30 @@ ifneq ($(shell uname), Linux)
   USE_ROCKSDB = NO
 endif
 
-ifneq ($(USE_ROCKSDB), NO)
-ROCKSDB_ENV=DIR=$(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/facebook/rocksdb CGO_CFLAGS=-I$${DIR}/include CGO_LDFLAGS="-L$${DIR} -lrocksdb -lstdc++ -lm -lz"
-ROCKSDB_TAG=-tags rocksdb
+USE_KVSSD = YES
+
+ifneq ($(USE_KVSSD), NO)
+KVSSD_DIR=$(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core
+CGO_CFLAGS  += -I$(KVSSD_DIR)/include
+CGO_LDFLAGS += -L$(KVSSD_DIR)/build/deps -lkvapi_static -lkvkdd_static -lnuma -lrt
+CGO_TAGS    += kvssd
+CXXFLAGS     = -MMD -MP -Wall -DLINUX -D_FILE_OFFSET_BITS=64 -fPIC -march=native -O2 -g -std=c++11
+LIBS        += $(KVSSD_DIR)/build/deps/libkvapi_static.a $(KVSSD_DIR)/build/deps/libkvkdd_static.a
 endif
 
-metadium: gmet logrot
+ifneq ($(USE_ROCKSDB), NO)
+ROCKSDB_DIR = $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/facebook/rocksdb
+CGO_CFLAGS  += -I$(ROCKSDB_DIR)/include
+CGO_LDFLAGS += -L$(ROCKSDB_DIR) -lrocksdb -lstdc++ -lm -lz -lzstd -lbz2 -llz4 -lsnappy -ljemalloc -pthread
+CGO_TAGS    += rocksdb
+LIBS        += $(ROCKSDB_DIR)/librocksdb.a
+endif
+
+ifneq ($(CGO_TAGS), "")
+	CGO_TAGS := -tags "$(CGO_TAGS)"
+endif
+
+metadium: gmet logrot dbbench cdbbench
 	@[ -d build/conf ] || mkdir -p build/conf
 	@cp -p metadium/scripts/gmet.sh metadium/scripts/solc.sh build/bin/
 	@cp -p metadium/scripts/config.json.example			  \
@@ -40,8 +58,8 @@ metadium: gmet logrot
 	@(cd build; tar cfz metadium.tar.gz bin conf)
 	@echo "Done building build/metadium.tar.gz"
 
-gmet: rocksdb metadium/admin_abi.go
-	$(ROCKSDB_ENV) build/env.sh go run build/ci.go install $(ROCKSDB_TAG) ./cmd/gmet
+gmet: rocksdb kvssd metadium/admin_abi.go
+	CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS)" build/env.sh go run build/ci.go install $(CGO_TAGS) ./cmd/gmet
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/gmet\" to launch gmet."
 
@@ -53,8 +71,11 @@ geth:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
-dbbench:
-	$(ROCKSDB_ENV) build/env.sh go run build/ci.go install $(ROCKSDB_TAG) ./cmd/dbbench
+dbbench: rocksdb kvssd
+	CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS)" build/env.sh go run build/ci.go install $(CGO_TAGS) ./cmd/dbbench
+
+cdbbench: cmd/cdbbench/cdbbench.c rocksdb kvssd
+	g++ $(CXXFLAGS) $(CGO_CFLAGS) $(CGO_LDFLAGS) -lcrypto -o build/bin/$@ cmd/cdbbench/cdbbench.c $(LIBS)
 
 swarm:
 	build/env.sh go run build/ci.go install ./cmd/swarm
@@ -86,6 +107,11 @@ clean:
 	@ROCKSDB_DIR=$(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/facebook/rocksdb;		\
 	if [ -d $${ROCKSDB_DIR} ]; then			\
 		cd $${ROCKSDB_DIR};		  	\
+		make clean;				\
+	fi
+	@KVSSD_DIR=$(shell pwd)/vendor/github.com/OpenMPDK/KVSSD/PDK/core/build;	\
+	if [ -d $${KVSSD_DIR} ]; then			\
+		cd $${KVSSD_DIR};		  	\
 		make clean;				\
 	fi
 
@@ -211,7 +237,31 @@ rocksdb:
 		$${GOPATH}/bin/govendor sync -v;			\
 	fi
 	@cd $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/facebook/rocksdb; \
-		make static_lib;
+		make -j24 static_lib;
+endif
+
+ifneq ($(USE_KVSSD), YES)
+kvssd:
+else
+kvssd:
+	@build/env.sh test 1;
+	@export GOPATH=$(shell pwd)/build/_workspace;			\
+	[ -d build/_workspace/bin ] || mkdir -p build/_workspace/bin;	\
+	if [ ! -x build/_workspace/bin/govendor ]; then			\
+		echo "Installing govendor...";				\
+		go get -v -u github.com/kardianos/govendor;		\
+	fi;								\
+	if [ ! -f vendor/github.com/OpenMPDK/KVSSD/README.md ]; then	\
+		echo "Syncing KVSSD PDK...";				\
+		cd $${GOPATH}/src/github.com/ethereum/go-ethereum/vendor; \
+		$${GOPATH}/bin/govendor sync -v;			\
+		sed -i '/add_library(kvapi SHARED/aadd_library(kvapi_static STATIC $${SOURCES_API} $${HEADERS_API})' $${GOPATH}/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core/CMakeLists.txt;	\
+	fi
+	@cd $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core;				\
+		mkdir -p build;						\
+		cd build;						\
+		cmake -DWITH_KDD=ON ../;				\
+		make -j24 kvkdd_static kvapi_static;
 endif
 
 AWK_CODE='								\

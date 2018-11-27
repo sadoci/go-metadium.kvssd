@@ -33,6 +33,13 @@
 			"revisionTime": "2018-07-12T00:56:34Z"
 		},
 		{
+			"checksumSHA1": "9r7KQSdKs50fC4h59jSZaNiz+FY=",
+			"path": "github.com/OpenMPDK/KVSSD",
+			"revision": "a82699b6afd9cf3a58c5e6a1efc37a1c98df1339",
+			"revisionTime": "2018-11-17T01:14:23Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "QC55lHNOv1+UAL2xtIHw17MJ8J8=",
 			"path": "github.com/StackExchange/wmi",
 			"revision": "5d049714c4a64225c3c79a7cf7d02f7fb5b96338",
