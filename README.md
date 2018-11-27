@@ -4,6 +4,13 @@ Golang implementation of the Metadium project. For now, this is just a forking p
 
 ## Building
 
+### Pre-requisites
+
+  * `golang` version >= 1.10 is required.
+  * `cmake`, `jemalloc`, `zstd`, `snappy`, `lz4` and maybe others are required  
+
+### Building
+
 `geth` has been renamed to `gmet`. Building it is the same as go-ethereum.
 
     make gmet
@@ -138,6 +145,32 @@ First download genesis.json from existing nodes to a data directory.
 After getting enodes of mining nodes, run gmet as follows.
 
     bin/gmet --datadir <data-directory> --bootnodes <enodes> --rpc --rpcaddr 0.0.0.0
+
+## Benchmarking
+
+Standalone benchmarking tools are added, `dbbench` and `cdbbench`. For the usage, refer to help message. It basically runs the following commands repeately to simulate what metadium does.
+
+  * write &lt;prefix&gt; &lt;start&gt; &lt;count&gt; &lt;batch-size&gt; &lt;value-size&gt;: writes 32 byte key, sha256 of "&lt;prefix&gt;-&lt;index&gt;" and &lt;value-size&gt; length of random data. At the end of a session, it write min and max index of the prefix.
+  * rread &lt;prefix&gt; &lt;count&gt;: reads min and max index of given prefix, and sha256 of "&lt;prefix&gt;-&lt;random-index&gt;".
+
+Output format is as follows.
+
+    @,OP,Prefix,Start/Range,Count,Time,Elap,TPS,DB(KB),R(#),R(KB),R(KB/s),W(#),W(KB),W(KB/s),DbR(#),DbR(KB),DbR(KB/s),DbW(#),DbW(KB),DbW(KB/s),Has(#),Del(#)
+
+Typically it runs
+
+    # for kvssd with 67 byte value size load
+    $ dbbench -t kvssd -d nvme1n1 -w 20 /dev/nvme1n1 < db-bench.67.load
+    # for rocksdb with 1k byte value size load
+    $ ulimit -n 2048; dbbench -t rocksdb -d nvme0n1 -w 20 /ss-983/db.rocksdb < db-bench.1k.load
+
+### dbbench - in golang
+
+### cdbbench - in C
+
+### key-value store benchmark
+
+<TBD>
 
 ### The original go-ethereum README follows...
 
