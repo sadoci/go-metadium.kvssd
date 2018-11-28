@@ -40,7 +40,8 @@ endif
 ifneq ($(USE_ROCKSDB), NO)
 ROCKSDB_DIR = $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/facebook/rocksdb
 CGO_CFLAGS  += -I$(ROCKSDB_DIR)/include
-CGO_LDFLAGS += -L$(ROCKSDB_DIR) -lrocksdb -lstdc++ -lm -lz -lzstd -lbz2 -llz4 -lsnappy -ljemalloc -pthread
+CGO_LDFLAGS += -L$(ROCKSDB_DIR) -lrocksdb -lstdc++ -lm -lz -pthread -lzstd -lbz2 -llz4 -lsnappy -ljemalloc
+#CGO_LDFLAGS += -L$(ROCKSDB_DIR) -lrocksdb -lstdc++ -lm -lz -pthread
 CGO_TAGS    += rocksdb
 LIBS        += $(ROCKSDB_DIR)/librocksdb.a
 endif
@@ -255,8 +256,8 @@ kvssd:
 		echo "Syncing KVSSD PDK...";				\
 		cd $${GOPATH}/src/github.com/ethereum/go-ethereum/vendor; \
 		$${GOPATH}/bin/govendor sync -v;			\
-	fi
-	@THE_FILE=$${GOPATH}/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core/CMakeLists.txt;				\
+	fi;								\
+	THE_FILE=$${GOPATH}/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core/CMakeLists.txt;				\
 		 grep -q kvapi_static $${THE_FILE} 2> /dev/null || 	\
 		 sed -i '/add_library(kvapi SHARED/aadd_library(kvapi_static STATIC $${SOURCES_API} $${HEADERS_API})' $${THE_FILE};
 	@cd $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/OpenMPDK/KVSSD/PDK/core;				\
