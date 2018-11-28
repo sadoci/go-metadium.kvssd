@@ -7,7 +7,8 @@ Golang implementation of the Metadium project. For now, this is just a forking p
 ### Pre-requisites
 
   * `golang` version >= 1.10 is required.
-  * `cmake`, `jemalloc`, `zstd`, `snappy`, `lz4` and maybe others are required  
+  * `cmake`, `numactl-devel`, `tbb-devel`, `jemalloc`, `zstd`, `snappy`, `lz4` and maybe others are required
+  * In some machines, `-zstd -lbz2 -llz4 -lsnappy -ljemalloc` may not be needed. Remove them in Makefile.
 
 ### Building
 
