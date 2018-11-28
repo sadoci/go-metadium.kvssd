@@ -110,7 +110,7 @@ func b2p(b []byte) unsafe.Pointer {
 }
 
 func kvssdError(err int) error {
-	return errors.New(C.GoString(C.kvs_errstr(C.int(err))))
+	return errors.New(C.GoString(C.kvs_errstr(C.int32_t(err))))
 }
 
 func NewKvssdDatabase(file string, cache int, handles int) (*KvssdDatabase, error) {
@@ -143,7 +143,7 @@ func (db *KvssdDatabase) Has(key []byte) (bool, error) {
 	}
 	k := C.kvs_key{
 		key: b2p(key),
-		length: C.uchar(len(key)),
+		length: C.kvs_key_t(len(key)),
 	}
 	status := C.uint8_t(0)
 	rc := C.kvs_exist_tuples(db.containerHandle, 1, &k, 1, &status, &exist_ctx)
@@ -179,7 +179,7 @@ func (db *KvssdDatabase) Delete(key []byte) error {
 	}
 	k := C.kvs_key{
 		key: b2p(key),
-		length: C.uchar(len(key)),
+		length: C.kvs_key_t(len(key)),
 	}
 	rc := C.kvs_delete_tuple(db.containerHandle, &k, &delete_ctx)
 	if rc != 0 {
