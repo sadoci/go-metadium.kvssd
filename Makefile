@@ -77,9 +77,11 @@ dbbench: rocksdb kvssd
 
 cmet: rocksdb kvssd
 	CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS)" build/env.sh go run build/ci.go install $(CGO_TAGS) ./cmd/cmet
+	cp cmd/cmet/meta-bench.sh cmd/cmet/kv-store.js build/bin
 
 cdbbench: cmd/cdbbench/cdbbench.c rocksdb kvssd
 	g++ $(CXXFLAGS) $(CGO_CFLAGS) $(CGO_LDFLAGS) -lcrypto -o build/bin/$@ cmd/cdbbench/cdbbench.c $(LIBS)
+	rm build/bin/cdbbench.d
 
 swarm:
 	build/env.sh go run build/ci.go install ./cmd/swarm
