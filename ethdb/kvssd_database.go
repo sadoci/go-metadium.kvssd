@@ -85,12 +85,23 @@ int kvssd_get(kvs_container_handle fd, char *key, int keylen, char **value, int 
 	return KVS_ERR_VALUE_LENGTH_INVALID;
 }
 
+uint8_t kvssd_has(kvs_container_handle fd, char *key, int keylen)
+{
+	kvs_exist_context ctx = { NULL, NULL };
+	kvs_key k = { key, keylen };
+	uint8_t status;
+	kvs_result rc;
+
+	rc = kvs_exist_tuples(fd, 1, &k, 1, &status, &ctx);
+	return rc == 0 ? status : 0xFF;
+}
+
 */
 import "C"
 
 import (
 	"errors"
-	_ "runtime"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -128,6 +139,10 @@ func (db *KvssdDatabase) Path() string {
 }
 
 func (db *KvssdDatabase) Put(key []byte, value []byte) error {
+	if _stats_enabled {
+		atomic.AddUint64(&_w_count, 1)
+		atomic.AddUint64(&_w_bytes, uint64(len(key) + len(value)))
+	}
 	rc := C.kvssd_put(db.containerHandle, b2c(key), C.int(len(key)), b2c(value), C.int(len(value)))
 	if rc != 0 {
 		return kvssdError(int(rc))
@@ -137,19 +152,10 @@ func (db *KvssdDatabase) Put(key []byte, value []byte) error {
 }
 
 func (db *KvssdDatabase) Has(key []byte) (bool, error) {
-	exist_ctx := C.kvs_exist_context{
-		private1: nil,
-		private2: nil,
+	if _stats_enabled {
+		atomic.AddUint64(&_l_count, 1)
 	}
-	k := C.kvs_key{
-		key: b2p(key),
-		length: C.kvs_key_t(len(key)),
-	}
-	status := C.uint8_t(0)
-	rc := C.kvs_exist_tuples(db.containerHandle, 1, &k, 1, &status, &exist_ctx)
-	if rc != 0 && rc != C.KVS_ERR_KEY_NOT_EXIST {
-		return false, kvssdError(int(rc))
-	}
+	status := int(C.kvssd_has(db.containerHandle, b2c(key), C.int(len(key))))
 	if status == 0 {
 		return false, nil
 	} else {
@@ -158,18 +164,30 @@ func (db *KvssdDatabase) Has(key []byte) (bool, error) {
 }
 
 func (db *KvssdDatabase) Get(key []byte) ([]byte, error) {
+	if _stats_enabled {
+		atomic.AddUint64(&_r_count, 1)
+	}
 	var v *C.char
 	var l C.int
 	rc := C.kvssd_get(db.containerHandle, b2c(key), C.int(len(key)), &v, &l)
 	if rc == 0 {
+		if _stats_enabled {
+			atomic.AddUint64(&_r_bytes, uint64(len(key)) + uint64(l))
+		}
 		defer C.free(unsafe.Pointer(v))
 		return C.GoBytes(unsafe.Pointer(v), l), nil
 	} else {
+		if _stats_enabled {
+			atomic.AddUint64(&_r_bytes, uint64(len(key)))
+		}
 		return nil, kvssdError(int(rc))
 	}
 }
 
 func (db *KvssdDatabase) Delete(key []byte) error {
+	if _stats_enabled {
+		atomic.AddUint64(&_d_count, 1)
+	}
 	delete_ctx := C.kvs_delete_context{
 		option: C.kvs_delete_option{
 			kvs_delete_error: C.bool(true),
@@ -215,11 +233,18 @@ func (db *KvssdDatabase) NewBatch() Batch {
 }
 
 func (b *kvssdBatch) Put(key, value []byte) error {
+	if _stats_enabled {
+		atomic.AddUint64(&_w_count, 1)
+		atomic.AddUint64(&_w_bytes, uint64(len(key) + len(value)))
+	}
 	b.data = append(b.data, &kvssdBatchItem{false, key, value})
 	return nil
 }
 
 func (b *kvssdBatch) Delete(key []byte) error {
+	if _stats_enabled {
+		atomic.AddUint64(&_d_count, 1)
+	}
 	b.data = append(b.data, &kvssdBatchItem{true, key, nil})
 	return nil
 }

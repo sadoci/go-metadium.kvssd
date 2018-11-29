@@ -68,10 +68,15 @@ type LDBDatabase struct {
 
 // TODO: returns either leveldb or rocksdb based on configuration
 func NewDatabase(file string, cache int, handles int) (Database, error) {
-	if params.UseRocksDb != 0 {
-		return NewRDBDatabase(file, cache, handles)
-	} else {
+	switch params.UseRocksDb {
+	case 0:
 		return NewLDBDatabase(file, cache, handles)
+	case 1:
+		return NewRDBDatabase(file, cache, handles)
+	case 2:
+		return NewKvssdDatabase(params.KvssdDevice, cache, handles)
+	default:
+		panic("Unknown DB type")
 	}
 }
 

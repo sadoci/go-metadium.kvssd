@@ -107,4 +107,5 @@ var (
 
 	NonceLimit				uint64 = 10000		// nonce limit for non-governing accounts
 	UseRocksDb              int    = 1          // LevelDB (0) or RocksDB (1)
+	KvssdDevice             string
 )

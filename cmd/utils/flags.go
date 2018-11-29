@@ -631,8 +631,13 @@ var (
 	}
 	UseRocksDb = cli.IntFlag{
 		Name:  "userocksdb",
-		Usage: "LevelDB (0) or RocksDB (1)",
+		Usage: "LevelDB (0), RocksDB (1) or KV SSD (2)",
 		Value: params.UseRocksDb,
+	}
+	KvssdDevice = cli.StringFlag{
+		Name:  "kvssddevice",
+		Usage: "Kvssd Device Path",
+		Value: params.KvssdDevice,
 	}
 )
 
@@ -1314,6 +1319,7 @@ func SetupNetwork(ctx *cli.Context) {
 	params.BlocksPerTurn = ctx.GlobalUint64(BlocksPerTurn.Name)
 	params.NonceLimit = ctx.GlobalUint64(NonceLimit.Name)
 	params.UseRocksDb = ctx.GlobalInt(UseRocksDb.Name)
+	params.KvssdDevice = ctx.GlobalString(KvssdDevice.Name)
 
 	if params.ConsensusMethod == params.ConsensusInvalid {
 		params.ConsensusMethod = params.ConsensusPoW
