@@ -50,7 +50,7 @@ ifneq ($(CGO_TAGS), "")
 	CGO_TAGS := -tags "$(CGO_TAGS)"
 endif
 
-metadium: gmet logrot dbbench cdbbench
+metadium: gmet logrot dbbench cdbbench cmet
 	@[ -d build/conf ] || mkdir -p build/conf
 	@cp -p metadium/scripts/gmet.sh metadium/scripts/solc.sh build/bin/
 	@cp -p metadium/scripts/config.json.example			  \
@@ -75,8 +75,8 @@ geth:
 dbbench: rocksdb kvssd
 	CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS)" build/env.sh go run build/ci.go install $(CGO_TAGS) ./cmd/dbbench
 
-cmet:
-	build/env.sh go run build/ci.go install ./cmd/cmet
+cmet: rocksdb kvssd
+	CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS)" build/env.sh go run build/ci.go install $(CGO_TAGS) ./cmd/cmet
 
 cdbbench: cmd/cdbbench/cdbbench.c rocksdb kvssd
 	g++ $(CXXFLAGS) $(CGO_CFLAGS) $(CGO_LDFLAGS) -lcrypto -o build/bin/$@ cmd/cdbbench/cdbbench.c $(LIBS)
