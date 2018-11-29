@@ -98,7 +98,7 @@ Open metadium console and create governance contract
     # wait for the completion, i.e. the address of AdminAnchor contract.
     > ad = Admin_new();
     # wait for the completion, i.e. the address of Admin contract.
-    > ad.switchAdmin(aa.address, ad.address);
+    > ad.switchAdmin(aa.address, ad.address, {from:eth.accounts[0], gas:1000000});
 
 #### Other Initial Nodes
 
