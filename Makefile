@@ -2,7 +2,7 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
-.PHONY: geth android ios geth-cross swarm evm all test clean
+.PHONY: geth android ios geth-cross swarm evm all test clean vendor
 .PHONY: geth-linux geth-linux-386 geth-linux-amd64 geth-linux-mips64 geth-linux-mips64le
 .PHONY: geth-linux-arm geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
 .PHONY: geth-darwin geth-darwin-386 geth-darwin-amd64
@@ -59,7 +59,7 @@ metadium: gmet logrot dbbench cdbbench cmet
 	@(cd build; tar cfz metadium.tar.gz bin conf)
 	@echo "Done building build/metadium.tar.gz"
 
-gmet: rocksdb kvssd metadium/admin_abi.go
+gmet: vendor rocksdb kvssd metadium/admin_abi.go
 	CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS)" build/env.sh go run build/ci.go install $(CGO_TAGS) ./cmd/gmet
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/gmet\" to launch gmet."
@@ -226,10 +226,7 @@ geth-windows-amd64:
 	@echo "Windows amd64 cross compilation done:"
 	@ls -ld $(GOBIN)/geth-windows-* | grep amd64
 
-ifneq ($(USE_ROCKSDB), YES)
-rocksdb:
-else
-rocksdb:
+vendor:
 	@build/env.sh test 1;
 	@export GOPATH=$(shell pwd)/build/_workspace;			\
 	[ -d build/_workspace/bin ] || mkdir -p build/_workspace/bin;	\
@@ -237,11 +234,20 @@ rocksdb:
 		echo "Installing govendor...";				\
 		go get -v -u github.com/kardianos/govendor;		\
 	fi;								\
-	if [ ! -f vendor/github.com/facebook/rocksdb/README.md ]; then	\
-		echo "Syncing rocksdb...";				\
+	if [ ! -f vendor/github.com/coreos/etcd/README.md -o 		\
+	     ! -f vendor/github.com/facebook/rocksdb/README.md ]; then	\
+		echo "Syncing vendor directory...";			\
 		cd $${GOPATH}/src/github.com/ethereum/go-ethereum/vendor; \
 		$${GOPATH}/bin/govendor sync -v;			\
 	fi
+
+#		$${GOPATH}/bin/govendor migrate;			\
+
+ifneq ($(USE_ROCKSDB), YES)
+rocksdb:
+else
+rocksdb: vendor
+	@build/env.sh test 1;
 	@cd $(shell pwd)/build/_workspace/src/github.com/ethereum/go-ethereum/vendor/github.com/facebook/rocksdb; \
 		make -j24 static_lib;
 endif
